@@ -101,12 +101,12 @@
                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary outline-none transition-colors">
             </div>
 
-            <!-- Link Hasil / Canva -->
+            <!-- Link Hasil / Canva / Folder Lokal -->
             <div class="mb-4">
               <label class="block text-sm font-medium text-gray-700 mb-1" for="linkCanva">
-                Link Output / Canva <span class="text-xs text-gray-400 font-normal">(Opsional)</span>
+                Link Output / Canva / Path Folder <span class="text-xs text-gray-400 font-normal">(Opsional)</span>
               </label>
-              <input type="url" id="linkCanva" name="linkCanva" placeholder="https://www.canva.com/..."
+              <input type="text" id="linkCanva" name="linkCanva" placeholder="https://www.canva.com/... atau D:\Folder\Tugas"
                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary outline-none transition-colors">
             </div>
 
@@ -346,20 +346,31 @@
           badgeStyle = "bg-purple-50 text-purple-700 border border-purple-200";
         }
         
-        // Logika Button Canva 
+        // Logika Button Output Links (Canva, Folder Lokal / File, atau Web Link)
         let actionElement = '<span class="text-gray-300">-</span>';
         if (row.linkCanva && row.linkCanva.trim() !== '') {
-          // Deteksi Canva Link untuk UI Spesifik
-          if (row.linkCanva.toLowerCase().includes('canva.com')) {
+          const rawLink = row.linkCanva.trim();
+          
+          if (rawLink.toLowerCase().includes('canva.com')) {
+            // 1. Tautan Canva
             actionElement = `
-              <a href="${row.linkCanva}" target="_blank" 
+              <a href="${rawLink}" target="_blank" 
                  class="inline-flex items-center justify-center bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-semibold py-1.5 px-3 rounded-full hover:shadow-lg hover:-translate-y-0.5 transition-all w-full sm:w-auto">
                 <i class="fa-solid fa-palette mr-1.5"></i> Buka di Canva
               </a>`;
-          } else {
-            // Jika Link bukan Canva
+          } else if (isLocalPath(rawLink)) {
+            // 2. Folder atau File Lokal Windows (Salin Path ke Clipboard)
+            const cleanPath = formatLocalPath(rawLink);
             actionElement = `
-              <a href="${row.linkCanva}" target="_blank" 
+              <button type="button" onclick="salinPath(this)" data-path="${escapeHtmlAttr(cleanPath)}"
+                      title="Klik untuk menyalin path folder ke File Explorer"
+                      class="inline-flex items-center justify-center bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold py-1.5 px-3 rounded-full border border-amber-300 shadow-sm hover:shadow transition-all w-full sm:w-auto">
+                <i class="fa-regular fa-copy mr-1.5 text-amber-600"></i> Salin Path
+              </button>`;
+          } else {
+            // 3. Tautan Web Biasa
+            actionElement = `
+              <a href="${rawLink}" target="_blank" 
                  class="inline-flex items-center justify-center bg-white text-gray-700 hover:text-primary hover:border-primary text-xs font-semibold py-1.5 px-3 rounded-full border border-gray-200 shadow-sm transition-all w-full sm:w-auto">
                 <i class="fa-solid fa-link mr-1.5"></i> Buka Tautan
               </a>`;
@@ -426,6 +437,139 @@
       }
       return dateStr;
     }
+
+    /**
+     * Cek apakah string merupakan path lokal (file:///, C:\..., D:\..., dsb.)
+     */
+    function isLocalPath(link) {
+      if (!link) return false;
+      const trimmed = link.trim().toLowerCase();
+      return trimmed.startsWith('file:') || /^[a-z]:[\\\/]/i.test(trimmed) || trimmed.startsWith('\\\\');
+    }
+
+    /**
+     * Konversi path dari format browser/URI ke path standar Windows Explorer
+     * Contoh: file:///D:/A%20Sawoo/Tugas -> D:\A Sawoo\Tugas
+     */
+    function formatLocalPath(raw) {
+      let p = raw.trim();
+      if (p.toLowerCase().startsWith('file:///')) {
+        p = p.substring(8);
+      } else if (p.toLowerCase().startsWith('file://')) {
+        p = p.substring(7);
+      } else if (p.toLowerCase().startsWith('file:')) {
+        p = p.substring(5);
+      }
+      try {
+        p = decodeURIComponent(p);
+      } catch (e) {}
+      // Ubah garis miring biasa / menjadi backslash Windows \
+      p = p.replace(/\//g, '\\');
+      return p;
+    }
+
+    /**
+     * Escape karakter khusus untuk atribut HTML
+     */
+    function escapeHtmlAttr(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    /**
+     * Salin path ke clipboard dan beri feedback visual
+     */
+    function salinPath(btn) {
+      const path = btn.getAttribute('data-path');
+      if (!path) return;
+
+      function onSuccess() {
+        const originalContent = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-check text-green-600 mr-1.5"></i> Tersalin!';
+        btn.classList.add('bg-green-50', 'text-green-800', 'border-green-300');
+        btn.classList.remove('bg-amber-50', 'text-amber-800', 'border-amber-300');
+
+        showToast(path);
+
+        setTimeout(() => {
+          btn.innerHTML = originalContent;
+          btn.classList.remove('bg-green-50', 'text-green-800', 'border-green-300');
+          btn.classList.add('bg-amber-50', 'text-amber-800', 'border-amber-300');
+        }, 2500);
+      }
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(path).then(onSuccess).catch(() => fallbackCopy(path, onSuccess));
+      } else {
+        fallbackCopy(path, onSuccess);
+      }
+    }
+
+    /**
+     * Fallback copy jika clipboard API tidak diizinkan di browser tertentu
+     */
+    function fallbackCopy(text, onSuccess) {
+      const tempInput = document.createElement('textarea');
+      tempInput.value = text;
+      tempInput.style.position = 'fixed';
+      tempInput.style.left = '-9999px';
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      try {
+        document.execCommand('copy');
+        if (onSuccess) onSuccess();
+      } catch (err) {
+        alert('Gagal menyalin otomatis. Path folder Anda:\n' + text);
+      }
+      document.body.removeChild(tempInput);
+    }
+
+    /**
+     * Tampilkan Toast Petunjuk Membuka File Explorer
+     */
+    let toastTimer = null;
+    function showToast(pathText) {
+      const toast = document.getElementById('toastNotification');
+      const pathContainer = document.getElementById('toastPathText');
+      pathContainer.textContent = pathText;
+      
+      toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+      toast.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
+
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        hideToast();
+      }, 7000);
+    }
+
+    function hideToast() {
+      const toast = document.getElementById('toastNotification');
+      toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+      toast.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+    }
   </script>
+
+  <!-- Toast Notification untuk Panduan Salin Path Folder -->
+  <div id="toastNotification" class="fixed bottom-6 right-6 max-w-sm bg-gray-900 text-white p-4 rounded-xl shadow-2xl z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none border border-gray-700">
+    <div class="flex items-start gap-3">
+      <div class="text-green-400 text-xl mt-0.5">
+        <i class="fa-solid fa-circle-check"></i>
+      </div>
+      <div class="flex-1">
+        <div class="text-xs font-bold text-green-400 uppercase tracking-wide">Path Berhasil Disalin!</div>
+        <div id="toastPathText" class="bg-gray-800 text-amber-300 p-2 rounded text-xs font-mono break-all my-2 border border-gray-700 select-all"></div>
+        <div class="text-[11px] text-gray-300 leading-relaxed">
+          Buka <b>File Explorer</b> lalu tempel (<kbd class="px-1 py-0.5 bg-gray-700 rounded font-semibold text-gray-200">Ctrl + V</kbd>) di address bar, atau tekan <kbd class="px-1 py-0.5 bg-gray-700 rounded font-semibold text-gray-200">Win + R</kbd> lalu paste & tekan <b>Enter</b>.
+        </div>
+      </div>
+      <button onclick="hideToast()" class="text-gray-400 hover:text-white pointer-events-auto ml-1 text-sm transition-colors" title="Tutup">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+  </div>
 </body>
 </html>
