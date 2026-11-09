@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Log Pekerjaan & Canva</title>
+  
+  <!-- Menggunakan Tailwind CSS via CDN untuk desain modern UI -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Menggunakan FontAwesome untuk Icon UI -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <script>
+    // Konfigurasi warna Tailwind kustom
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#4f46e5', // Warna ungu kebiruan (Indigo)
+            secondary: '#ec4899',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* CSS tambahan untuk animasi loading spinner */
+    .loader {
+      border: 3px solid #f3f3f3;
+      border-radius: 50%;
+      border-top: 3px solid #4f46e5;
+      width: 18px;
+      height: 18px;
+      -webkit-animation: spin 1s linear infinite; /* Safari */
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 8px;
+    }
+    @-webkit-keyframes spin {
+      0% { -webkit-transform: rotate(0deg); }
+      100% { -webkit-transform: rotate(360deg); }
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen text-gray-800 font-sans">
+  
+  <div class="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
+    
+    <!-- Header Web App -->
+    <header class="mb-8 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900 border-b-4 border-primary inline-block pb-1">Panduan Kerja & Log Harian</h1>
+        <p class="text-gray-500 mt-2">Catat rutinitas harian dan dokumentasikan desain Canva/Output Anda dengan rapi.</p>
+      </div>
+    </header>
+
+    <!-- UI Grid Layout (1 Kolom di Mobile, 1/3 - 2/3 Sidebar di Desktop) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      
+      <!--========================================= 
+         BAGIAN KIRI: Form Input Log Pekerjaan
+      =========================================-->
+      <div class="lg:col-span-1">
+        <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100 sticky top-6">
+          <h2 class="text-xl font-semibold mb-4 text-gray-800">
+            <i class="fa-solid fa-pen-to-square text-primary mr-2"></i>Catat Pekerjaan
+          </h2>
+          
+          <form id="logForm" onsubmit="handleFormSubmit(event)">
+            
+            <!-- Tanggal (Diisi Otomatis JS) -->
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1" for="tanggal">Tanggal Pekerjaan</label>
+              <input type="date" id="tanggal" name="tanggal" required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary outline-none transition-colors">
+            </div>
+
+            <!-- Kategori Pekerjaan -->
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1" for="kategori">Kategori</label>
+              <select id="kategori" name="kategori" required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary outline-none transition-colors">
+                <option value="" disabled selected>-- Pilih Kategori --</option>
+                <option value="Pembuatan Surat">Pembuatan Surat</option>
+                <option value="Surat Masuk/Keluar">Surat Masuk/Keluar</option>
+                <option value="Laporan Harian/Bulanan">Laporan Harian/Bulanan</option>
+                <option value="Desain/Editing Canva">Desain/Editing Canva</option>
+                <option value="Lain-lain">Lain-lain</option>
+              </select>
+            </div>
+
+            <!-- Nama Pekerjaan -->
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1" for="namaPekerjaan">Nama / Detail Pekerjaan</label>
+              <input type="text" id="namaPekerjaan" name="namaPekerjaan" placeholder="Cth: Mendesain Banner Acara" required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary outline-none transition-colors">
+            </div>
+
+            <!-- Link Hasil / Canva -->
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1" for="linkCanva">
+                Link Output / Canva <span class="text-xs text-gray-400 font-normal">(Opsional)</span>
+              </label>
+              <input type="url" id="linkCanva" name="linkCanva" placeholder="https://www.canva.com/..."
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary outline-none transition-colors">
+            </div>
+
+            <!-- Catatan Tambahan -->
+            <div class="mb-6">
+              <label class="block text-sm font-medium text-gray-700 mb-1" for="catatan">
+                Catatan <span class="text-xs text-gray-400 font-normal">(Opsional)</span>
+              </label>
+              <textarea id="catatan" name="catatan" rows="3" placeholder="Info tambahan..."
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary outline-none transition-colors"></textarea>
+            </div>
+
+            <!-- Tombol Submit -->
+            <button type="submit" id="btnSimpan"
+              class="w-full bg-primary hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex justify-center items-center shadow">
+              <span><i class="fa-solid fa-floppy-disk mr-2"></i>Simpan Log</span>
+            </button>
+            
+            <!-- Area Pesan Notifikasi -->
+            <div id="statusMessage" class="mt-4 text-sm text-center font-medium hidden p-3 rounded-lg bg-green-50"></div>
+          </form>
+        </div>
+      </div>
+
+      <!--========================================= 
+         BAGIAN KANAN: Tabel Riwayat & Dashboard
+      =========================================-->
+      <div class="lg:col-span-2">
+        <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100 flex flex-col h-full min-h-[500px]">
+          
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 border-b border-gray-100 pb-4">
+            <h2 class="text-xl font-semibold text-gray-800">
+              <i class="fa-solid fa-list-check text-primary mr-2"></i>Riwayat Pekerjaan Hari Ini
+            </h2>
+            
+            <!-- Fitur Pencarian / Filter Sidebar -->
+            <div class="flex items-center gap-2 w-full sm:w-auto bg-gray-50 p-1.5 rounded-lg border border-gray-200">
+              <i class="fa-solid fa-filter text-gray-400 pl-2"></i>
+              <input type="date" id="filterTanggal" title="Filter Tanggal"
+                class="px-2 py-1.5 bg-transparent text-sm focus:outline-none focus:text-primary cursor-pointer border-r border-gray-300"
+                onchange="filterRiwayat()">
+              <select id="filterKategori" title="Filter Kategori"
+                class="px-2 py-1.5 bg-transparent text-sm focus:outline-none focus:text-primary cursor-pointer w-full sm:w-40"
+                onchange="filterRiwayat()">
+                <option value="">Semua Kategori</option>
+                <option value="Pembuatan Surat">Pembuatan Surat</option>
+                <option value="Surat Masuk/Keluar">Surat Masuk/Keluar</option>
+                <option value="Laporan Harian/Bulanan">Laporan Harian/Bulanan</option>
+                <option value="Desain/Editing Canva">Desain/Editing Canva</option>
+                <option value="Lain-lain">Lain-lain</option>
+              </select>
+              <button onclick="resetFilter()" title="Reset Filter" class="text-gray-400 hover:text-red-500 px-2 transition-colors">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Bagian Loader -->
+          <div id="loadingRiwayat" class="flex-grow flex flex-col items-center justify-center py-12">
+            <div class="loader mb-3 border-[4px] border-primary w-8 h-8 rounded-full border-t-transparent animate-spin"></div>
+            <p class="text-sm font-medium text-gray-500 animate-pulse">Menghubungkan ke perangkas data...</p>
+          </div>
+
+          <!-- Tag Tabel Riwayat -->
+          <div class="overflow-x-auto hidden flex-grow" id="tableContainer">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
+                  <th class="py-3 px-4 font-semibold w-24">Tanggal</th>
+                  <th class="py-3 px-4 font-semibold w-36">Kategori</th>
+                  <th class="py-3 px-4 font-semibold">Pekerjaan</th>
+                  <th class="py-3 px-4 font-semibold text-center w-32">Output Links</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody" class="text-sm divide-y divide-gray-100">
+                <!-- Baris tabel dipopulasi oleh JavaScript -->
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- State Saat Data Kosong -->
+          <div id="emptyState" class="hidden flex-grow flex flex-col items-center justify-center py-12">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-50 mb-3 text-gray-300 border border-gray-100 shadow-inner">
+              <i class="fa-regular fa-folder-open text-2xl"></i>
+            </div>
+            <h3 class="text-lg font-medium text-gray-800 mb-1">Belum ada aktivitas</h3>
+            <p class="text-gray-500 text-sm">Pekerjaan hari ini atau pada filter terpilih kosong.</p>
+          </div>
+
+        </div>
+      </div>
+      
+    </div>
+  </div>
+
+  <!--========================================= 
+      SCRIPT JAVASCRIPT: Frontend Logic
+  =========================================-->
+  <script>
+    // Menyimpan raw data untuk kebutuhan filtering Frontend
+    let dataRiwayat = [];
+
+    // Main Run: Setelah HTML dirender
+    document.addEventListener("DOMContentLoaded", function() {
+      // 1. Inisiasi form tanggal menjadi default "Hari Ini"
+      const now = new Date();
+      // Mengatasi zona waktu lokal untuk tampilan HTML Date Input (YYYY-MM-DD)
+      const offset = now.getTimezoneOffset()
+      const tzDate = new Date(now.getTime() - (offset*60*1000))
+      const hariIniStr = tzDate.toISOString().split('T')[0];
+      
+      document.getElementById('tanggal').value = hariIniStr;
+      
+      // Default filter disesuaikan ke tanggal hari ini (opsional)
+      // document.getElementById('filterTanggal').value = hariIniStr; 
+      
+      // 2. Load Table
+      loadData();
+    });
+
+    /**
+     * Submit Form ke Google Apps Script (Backend)
+     */
+    function handleFormSubmit(event) {
+      event.preventDefault(); 
+      
+      const btn = document.getElementById('btnSimpan');
+      const statusMsg = document.getElementById('statusMessage');
+      const form = document.getElementById('logForm');
+      
+      // Feedback Visual (Loading status)
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<span>Menyimpan...</span> <div class="loader"></div>';
+      btn.disabled = true;
+      btn.classList.add('opacity-75', 'cursor-not-allowed');
+      
+      // Kumpulkan Payload
+      const data = {
+        tanggal: document.getElementById('tanggal').value,
+        kategori: document.getElementById('kategori').value,
+        namaPekerjaan: document.getElementById('namaPekerjaan').value,
+        linkCanva: document.getElementById('linkCanva').value,
+        catatan: document.getElementById('catatan').value
+      };
+
+      // Komunikasi dengan Backend (simpanData gs function)
+      google.script.run
+        .withSuccessHandler(function(response) {
+          // Reset Button
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+          btn.classList.remove('opacity-75', 'cursor-not-allowed');
+          
+          statusMsg.classList.remove('hidden', 'text-red-700', 'bg-red-50');
+          statusMsg.classList.add('text-green-700', 'bg-green-50');
+          
+          if(response.success) {
+            statusMsg.innerHTML = '<i class="fa-solid fa-circle-check mr-2"></i>' + response.message;
+            
+            // Bersihkan form text, tapi tetapkan tanggal ke state sebelumnya
+            const tglCache = data.tanggal;
+            form.reset();
+            document.getElementById('tanggal').value = tglCache;
+            
+            // Re-loads tabel di Dashboard
+            loadData();
+            
+            // Sembunyikan notifikasi setelah beberapa saat
+            setTimeout(() => { statusMsg.classList.add('hidden'); }, 4000);
+          } else {
+            statusMsg.classList.replace('text-green-700', 'text-red-700');
+            statusMsg.classList.replace('bg-green-50', 'bg-red-50');
+            statusMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-2"></i>' + response.message;
+          }
+        })
+        .withFailureHandler(function(error) {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+          btn.classList.remove('opacity-75', 'cursor-not-allowed');
+          statusMsg.classList.remove('hidden');
+          statusMsg.classList.add('text-red-700', 'bg-red-50');
+          statusMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-2"></i> Gagal terhubung ke Google Apps Script.';
+        })
+        .simpanData(data);
+    }
+
+    /**
+     * Memanggil fungsi getRiwayat di GS
+     */
+    function loadData() {
+      // Toggle UI State
+      document.getElementById('loadingRiwayat').classList.remove('hidden');
+      document.getElementById('tableContainer').classList.add('hidden');
+      document.getElementById('emptyState').classList.add('hidden');
+      
+      google.script.run
+        .withSuccessHandler(function(data) {
+          dataRiwayat = data;
+          filterRiwayat(); // Setelah Load, terapkan filter yang saat ini aktif
+        })
+        .withFailureHandler(function(error) {
+          console.error("Terjadi masalah load data:", error);
+          document.getElementById('loadingRiwayat').classList.add('hidden');
+        })
+        .getRiwayat();
+    }
+
+    /**
+     * Merender data Javascript Array ke dalam DOM <tbody id="tableBody">
+     */
+    function renderTable(dataArray) {
+      document.getElementById('loadingRiwayat').classList.add('hidden');
+      const tableBody = document.getElementById('tableBody');
+      tableBody.innerHTML = '';
+      
+      if (!dataArray || dataArray.length === 0) {
+        document.getElementById('emptyState').classList.remove('hidden');
+        document.getElementById('tableContainer').classList.add('hidden');
+        return;
+      }
+      
+      document.getElementById('emptyState').classList.add('hidden');
+      document.getElementById('tableContainer').classList.remove('hidden');
+      
+      dataArray.forEach(function(row) {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-primary/5 transition-colors group";
+        
+        // Render Badge Kategori berdasarkan nama kategori
+        let badgeStyle = "bg-gray-100 text-gray-700 border border-gray-200"; // Default
+        
+        if (row.kategori === 'Desain/Editing Canva') {
+          badgeStyle = "bg-blue-50 text-blue-700 border border-blue-200";
+        } else if (row.kategori === 'Pembuatan Surat' || row.kategori === 'Surat Masuk/Keluar') {
+          badgeStyle = "bg-emerald-50 text-emerald-700 border border-emerald-200";
+        } else if (row.kategori === 'Laporan Harian/Bulanan') {
+          badgeStyle = "bg-purple-50 text-purple-700 border border-purple-200";
+        }
+        
+        // Logika Button Canva 
+        let actionElement = '<span class="text-gray-300">-</span>';
+        if (row.linkCanva && row.linkCanva.trim() !== '') {
+          // Deteksi Canva Link untuk UI Spesifik
+          if (row.linkCanva.toLowerCase().includes('canva.com')) {
+            actionElement = `
+              <a href="${row.linkCanva}" target="_blank" 
+                 class="inline-flex items-center justify-center bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-semibold py-1.5 px-3 rounded-full hover:shadow-lg hover:-translate-y-0.5 transition-all w-full sm:w-auto">
+                <i class="fa-solid fa-palette mr-1.5"></i> Buka di Canva
+              </a>`;
+          } else {
+            // Jika Link bukan Canva
+            actionElement = `
+              <a href="${row.linkCanva}" target="_blank" 
+                 class="inline-flex items-center justify-center bg-white text-gray-700 hover:text-primary hover:border-primary text-xs font-semibold py-1.5 px-3 rounded-full border border-gray-200 shadow-sm transition-all w-full sm:w-auto">
+                <i class="fa-solid fa-link mr-1.5"></i> Buka Tautan
+              </a>`;
+          }
+        }
+        
+        tr.innerHTML = `
+          <td class="py-3.5 px-4 whitespace-nowrap text-gray-500 align-top">${formatTanggalId(row.tanggal)}</td>
+          <td class="py-3.5 px-4 align-top">
+            <span class="inline-block px-2.5 py-1 text-[11px] uppercase tracking-wider font-bold rounded-md ${badgeStyle}">
+              ${row.kategori}
+            </span>
+          </td>
+          <td class="py-3.5 px-4 align-top">
+            <div class="font-medium text-gray-800 text-sm">${row.namaPekerjaan}</div>
+            ${row.catatan ? `<div class="text-xs text-gray-500 mt-1 italic">${row.catatan}</div>` : ''}
+          </td>
+          <td class="py-3.5 px-4 text-center align-top">
+            ${actionElement}
+          </td>
+        `;
+        
+        tableBody.appendChild(tr);
+      });
+    }
+
+    /**
+     * Engine Filter untuk Array Data Client-Side
+     */
+    function filterRiwayat() {
+      const filterTgl = document.getElementById('filterTanggal').value;
+      const filterKat = document.getElementById('filterKategori').value;
+      
+      let dataFiltered = dataRiwayat;
+      
+      if (filterTgl) {
+        dataFiltered = dataFiltered.filter(row => row.tanggal === filterTgl);
+      }
+      
+      if (filterKat) {
+        dataFiltered = dataFiltered.filter(row => row.kategori === filterKat);
+      }
+      
+      renderTable(dataFiltered);
+    }
+    
+    /**
+     * Reset filter UI input dan reload tabel kembali seperti semula
+     */
+    function resetFilter() {
+      document.getElementById('filterTanggal').value = '';
+      document.getElementById('filterKategori').value = '';
+      filterRiwayat();
+    }
+    
+    /**
+     * Konversi string "YYYY-MM-DD" ke format human readable (DD / MM / YYYY)
+     */
+    function formatTanggalId(dateStr) {
+      if(!dateStr) return '';
+      const parts = dateStr.split('-');
+      if(parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+      return dateStr;
+    }
+  </script>
+</body>
+</html>
